@@ -111,14 +111,13 @@ class MQTTClient:
         self._reader, self._writer = await asyncio.open_connection(
             host=self._server, port=self._port
         )
-
-        self._logger.info(f"Connected to MQTT broker {self._server}:{self._port}")
-        self._is_running = True
-
         # Send CONNECT packet
         connect_packet = self._build_connect_packet(clean_session=clean_session)
-        self._writer.write(connect_packet)
-        await self._writer.drain()
+        if not await self._write(connect_packet):
+            self._logger.error("Error sending CONNECT")
+        else:
+            self._logger.info(f"Connected to MQTT broker {self._server}:{self._port}")
+            self._is_running = True
 
         # Start read loop
         self._read_task = asyncio.create_task(self._read_loop())
@@ -150,9 +149,18 @@ class MQTTClient:
             msg_id.to_bytes(2, 'big') if qos else b'',
             message if isinstance(message, bytes) else str(message).encode()
         ])
-        self._writer.write(packet)
-        await self._writer.drain()
-        return msg_id
+        sent = await self._write(packet)
+        return None if not sent else msg_id
+    
+    async def _write(self, packet):
+        try:
+            self._writer.write(packet)
+            await self._writer.drain()
+            return True
+        except OSError as e:
+            self._logger.error(f"Error sending packet: {e}")
+            self._is_running = False
+            return False
 
     def _build_connect_packet(self, clean_session=True):
         """Build MQTT CONNECT packet"""
@@ -206,12 +214,7 @@ class MQTTClient:
     async def _ping_loop(self):
         while self._is_running:
             await asyncio.sleep(self._keepalive)
-            try:
-                self._writer.write(b"\xc0\x00")
-                await self._writer.drain()
-            except OSError as e:
-                self._logger.error(f"Error sending PINGREQ: {e}")
-                self._is_running = False
+            await self._write(b"\xc0\x00")
 
     def _encode_remaining_length(self, n: int) -> bytes:
         """Pack MQTT remaining length into bytes (128-base)"""
