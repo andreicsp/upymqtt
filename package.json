@@ -1,0 +1,9 @@
+{
+    "urls": [
+      ["upymqtt/__init__.py", "github:andreicsp/upymqtt/upymqtt/__init__.py"],
+      ["upymqtt/client.py", "github:andreicsp/upymqtt/upymqtt/client.py"],
+      ["upymqtt/log_handler.py", "github:andreicsp/upymqtt/upymqtt/log_handler.py"]
+    ],
+    "deps": [],
+    "version": "0.1.0"
+  }
