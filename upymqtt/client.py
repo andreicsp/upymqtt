@@ -34,7 +34,8 @@ class MQTTClient:
         port=0,
         user=None,
         password=None,
-        keepalive=5,
+        keepalive=20,
+        ping_interval=5,
         ssl=False,
         ssl_params={},
     ):
@@ -55,6 +56,7 @@ class MQTTClient:
         self._user = user
         self._password = password
         self._keepalive = keepalive
+        self._ping_interval = ping_interval
         self._ssl = ssl
         self._ssl_params = ssl_params
         self._sock = None
@@ -213,7 +215,7 @@ class MQTTClient:
 
     async def _ping_loop(self):
         while self._is_running:
-            await asyncio.sleep(self._keepalive)
+            await asyncio.sleep(self._ping_interval)
             await self._write(b"\xc0\x00")
 
     def _encode_remaining_length(self, n: int) -> bytes:
